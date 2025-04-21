@@ -30,11 +30,16 @@ def build_vocab_from_file(filename, min_freq=1):
 def encode(text, token2id, max_len=128):
     tokens = []
     i = 0
+    special_tokens = ['<bos>', '<sep>', '<eos>']
     while i < len(text):
-        if text[i:i+5] in ['<bos>', '<sep>', '<eos>']:
-            tokens.append(text[i:i+5])
-            i += 5
-        else:
+        matched = False
+        for token in special_tokens:
+            if text[i:i+len(token)] == token:
+                tokens.append(token)
+                i += len(token)
+                matched = True
+                break
+        if not matched:
             tokens.append(text[i])
             i += 1
 
@@ -43,15 +48,37 @@ def encode(text, token2id, max_len=128):
     ids += [token2id['<pad>']] * (max_len - len(ids))
     return ids
 
+
 # =============================
 # Step 3: 解码函数
 # =============================
 def decode(ids, id2token):
     tokens = [id2token.get(i, '<unk>') for i in ids]
-    text = ''
-    for tok in tokens:
-        if tok == '<pad>':
-            continue
-        text += tok
+    # 去除 <pad>，并确保格式正确
+    text = ''.join([tok for tok in tokens if tok != '<pad>'])
     return text
 
+# filename = 'train.txt'
+
+# # Step 1: 构建词表
+# token2id, id2token = build_vocab_from_file(filename)
+
+
+# # Step 2: 读取train.txt并编码前十个句子
+# with open(filename, 'r', encoding='utf-8') as f:
+#     lines = f.readlines()
+
+# Step 3: 编码并解码前十个句子
+# for i in range(min(1, len(lines))):  # 获取前十行或文件中的所有行
+#     line = lines[i].strip()
+
+#     # 编码
+#     encoded = encode(line, token2id)
+#     # 解码
+#     decoded = decode(encoded, id2token)
+
+#     # 输出原文、编码后的前几个token和解码后的结果
+#     print(f"原文: {line}")
+#     print(f"编码后的前几个结果: {encoded[:10]}...")  # 只显示编码后的前10个
+#     print(f"解码后的结果: {decoded}")
+#     print("=" * 50)
