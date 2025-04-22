@@ -31,7 +31,7 @@ model = GPT2Transformer(
     dropout=0.1
 ).to(device)
 
-# model.load_state_dict(torch.load(model_path, map_location=device))
+model.load_state_dict(torch.load(model_path, map_location=device))
 model.eval()
 print("✅ 模型已成功加载并进入推理模式！")
 

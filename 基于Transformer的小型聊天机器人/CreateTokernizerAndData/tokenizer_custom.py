@@ -1,6 +1,5 @@
 import json
 from collections import Counter
-import os
 
 # =============================
 # Step 1: 构建词表
@@ -25,78 +24,75 @@ def build_vocab_from_file(filename, min_freq=1):
     return token2id, id2token
 
 # =============================
-# Step 2: 编码函数
+# Step 2: 保存词表到文件
+# =============================
+def save_vocab_to_file(token2id, id2token, filepath):
+    vocab_data = {
+        'token2id': token2id,
+        'id2token': {str(k): v for k, v in id2token.items()}  # key 转字符串，避免 JSON 问题
+    }
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(vocab_data, f, ensure_ascii=False, indent=4)
+    print(f"✅ 词表已保存到 {filepath}")
+
+# =============================
+# Step 3: 从文件加载词表
+# =============================
+def load_vocab_from_file(filepath):
+    with open(filepath, 'r', encoding='utf-8') as f:
+        vocab_data = json.load(f)
+    token2id = vocab_data['token2id']
+    id2token = {int(k): v for k, v in vocab_data['id2token'].items()}  # key 转回整数
+    print(f"📂 词表已从 {filepath} 加载")
+    return token2id, id2token
+
+# =============================
+# Step 4: 编码函数
 # =============================
 def encode(text, token2id, max_len=128):
-    tokens = []
-    i = 0
-    special_tokens = ['<bos>', '<sep>', '<eos>']
-    while i < len(text):
-        matched = False
-        for token in special_tokens:
-            if text[i:i+len(token)] == token:
-                tokens.append(token)
-                i += len(token)
-                matched = True
-                break
-        if not matched:
-            tokens.append(text[i])
-            i += 1
+    # 添加 <bos> 和 <eos>
+    tokens = ['<bos>'] + list(text) + ['<eos>']
 
+    # 转成 ID
     ids = [token2id.get(tok, token2id['<unk>']) for tok in tokens]
+
+    # 补齐或截断
     ids = ids[:max_len]
     ids += [token2id['<pad>']] * (max_len - len(ids))
+
     return ids
 
-
 # =============================
-# Step 3: 解码函数
+# Step 5: 解码函数
 # =============================
 def decode(ids, id2token):
     tokens = [id2token.get(i, '<unk>') for i in ids]
-    # 去除 <pad>，并确保格式正确
-    text = ''.join([tok for tok in tokens if tok != '<pad>'])
+
+    # 过滤掉特殊符号
+    text = ''.join([tok for tok in tokens if tok not in ['<pad>', '<unk>', '<bos>', '<eos>']])
     return text
 
-# filename = 'train.txt'
+# =============================
+# 示例使用
+# =============================
+if __name__ == '__main__':
+    train_file = 'train.txt'      # 构建词表的数据
+    vocab_file = 'vocab.json'     # 词表保存位置
 
-# # Step 1: 构建词表
-# token2id, id2token = build_vocab_from_file(filename)
+    # 1. 构建词表
+    token2id, id2token = build_vocab_from_file(train_file)
 
+    # 2. 保存词表
+    save_vocab_to_file(token2id, id2token, vocab_file)
 
-# # Step 2: 读取train.txt并编码前十个句子
-# with open(filename, 'r', encoding='utf-8') as f:
-#     lines = f.readlines()
+    # 3. 加载词表
+    loaded_token2id, loaded_id2token = load_vocab_from_file(vocab_file)
 
-# Step 3: 编码并解码前十个句子
-# for i in range(min(1, len(lines))):  # 获取前十行或文件中的所有行
-#     line = lines[i].strip()
+    # 4. 测试编码 & 解码
+    question = "你好"
+    encoded = encode(question, loaded_token2id, max_len=40)
+    decoded = decode(encoded, loaded_id2token)
 
-#     # 编码
-#     encoded = encode(line, token2id)
-#     # 解码
-#     decoded = decode(encoded, id2token)
-
-#     # 输出原文、编码后的前几个token和解码后的结果
-#     print(f"原文: {line}")
-#     print(f"编码后的前几个结果: {encoded[:10]}...")  # 只显示编码后的前10个
-#     print(f"解码后的结果: {decoded}")
-#     print("=" * 50)
-
-def encode_question(question: str, token2id: dict, max_len: int = 128) -> list:
-    """
-    给定问题内容，生成加上 <bos> 和 <sep> 的编码序列。
-    """
-    special_tokens = ["<bos>", "<sep>"]
-    input_text = special_tokens[0] + question + special_tokens[1]
-
-    # 把每个字符作为 token 进行编码
-    input_ids = [token2id.get(char, token2id.get("<unk>", 1)) for char in input_text]
-
-    # 补齐到 max_len
-    if len(input_ids) < max_len:
-        input_ids += [token2id.get("<pad>", 0)] * (max_len - len(input_ids))
-    else:
-        input_ids = input_ids[:max_len]
-
-    return input_ids
+    print(f"\n🟢 原始问题: {question}")
+    print(f"🔢 编码后的前几个 token: {encoded[:10]}...")
+    print(f"🔤 解码后的问题: {decoded}")

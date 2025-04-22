@@ -15,14 +15,20 @@ PAD_TOKEN = "<pad>"  # 假设填充 token 为 <pad>
 # 构建词表
 token2id, id2token = build_vocab_from_file(input_file)
 
-# 获取特殊 token 的 ID
-sep_token_id = token2id.get(SEP_TOKEN)
-if sep_token_id is None:
-    raise ValueError("词表中缺失 <sep>")
+# 确保特殊 token 存在
+special_tokens = [BOS_TOKEN, SEP_TOKEN, EOS_TOKEN, PAD_TOKEN]
 
-pad_token_id = token2id.get(PAD_TOKEN, None)
-if pad_token_id is None:
-    raise ValueError("词表中缺失 <pad>")
+# 检查并添加特殊 token
+for token in special_tokens:
+    if token not in token2id:
+        token2id[token] = len(token2id)  # 给特殊 token 分配一个新的 ID
+        id2token[len(id2token)] = token  # 反向映射
+
+# 获取特殊 token 的 ID
+bos_token_id = token2id[BOS_TOKEN]
+sep_token_id = token2id[SEP_TOKEN]
+eos_token_id = token2id[EOS_TOKEN]
+pad_token_id = token2id[PAD_TOKEN]
 
 def process_line(line):
     # 保证是标准格式
@@ -44,6 +50,10 @@ def process_line(line):
 
     # 构建 labels，<sep> 之前（包含）的位置设为 0，其余正常训练
     labels = input_ids.copy()
+
+    # 如果 labels 的第一位不是 BOS_TOKEN，则将其设置为 BOS_TOKEN
+    if labels[0] != bos_token_id:
+        labels[0] = bos_token_id
 
     for i in range(sep_idx + 1):  # 包含 <sep>
         labels[i] = 0  # 使用 0 来表示填充部分

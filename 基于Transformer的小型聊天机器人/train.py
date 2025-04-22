@@ -8,30 +8,34 @@ import os
 import json
 
 from model import GPT2Transformer
-from CreateTokernizerAndData.tokenizer_custom import build_vocab_from_file, encode, decode
+from CreateTokernizerAndData.tokenizer_custom import load_vocab_from_file, encode,decode
 
 # =====================
 # 配置参数
 # =====================
-train_file = 'train.txt'  # 用于构建词表的文件
-train_data_file = 'train_encoded.jsonl'  # 训练数据文件
+
+vocab_file = 'vocab.json'  # 用于构建词表的文件
+train_data_file = 'train_encoded_v2.jsonl'  # 训练数据文件
+
 batch_size = 16
 max_len = 128
-num_epochs = 10
+num_epochs = 30
 learning_rate = 1e-4
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_path = "gpt2_qa_model.pth"
 
-# 模型保存目录（每10轮保存一次）
+# 模型保存目录（每2轮保存一次）
 model_save_dir = "saved_models"
 os.makedirs(model_save_dir, exist_ok=True)
 
 # =====================
 # 读取词表
 # =====================
-token2id, id2token = build_vocab_from_file(train_file)
+token2id, id2token = load_vocab_from_file(vocab_file)
+
 vocab_size = len(token2id)
 print("🚀 词表大小：", vocab_size)
+
 
 # =====================
 # 自定义数据集
@@ -68,6 +72,16 @@ class QADataset(Dataset):
 dataset = QADataset(train_data_file, token2id, max_len)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
+# for batch_idx, (input_ids, labels) in enumerate(data_loader):
+#     if batch_idx == 0:
+#         print("🚀 第一批次的输入和标签：")
+#         for i in range(len(input_ids)):
+#             print(f"---- 样本 {i+1} ----")
+#             print(f"输入编码：{input_ids[i].tolist()}")  # 转换为列表
+#             print(f"输入解码：{decode(input_ids[i].tolist(), id2token)}")
+#             print(f"输出编码：{labels[i].tolist()}")  # 转换为列表
+#             print(f"输出解码：{decode(labels[i].tolist(), id2token)}")
+#         break
 # =====================
 # 构建模型
 # =====================
