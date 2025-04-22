@@ -17,10 +17,14 @@ train_file = 'train.txt'  # 用于构建词表的文件
 train_data_file = 'train_encoded.jsonl'  # 训练数据文件
 batch_size = 16
 max_len = 128
-num_epochs = 200
-learning_rate = 5e-4
+num_epochs = 10
+learning_rate = 1e-4
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model_path = "gpt2_qa_model.pth"
+
+# 模型保存目录（每10轮保存一次）
+model_save_dir = "saved_models"
+os.makedirs(model_save_dir, exist_ok=True)
 
 # =====================
 # 读取词表
@@ -32,11 +36,6 @@ print("🚀 词表大小：", vocab_size)
 # =====================
 # 自定义数据集
 # =====================
-import torch
-import json
-from CreateTokernizerAndData.tokenizer_custom import decode
-
-# 自定义数据集
 class QADataset(Dataset):
     def __init__(self, filepath, token2id, max_len):
         self.samples = []
@@ -46,14 +45,14 @@ class QADataset(Dataset):
                 input_ids = sample['input_ids']
                 labels = sample['labels']
 
-                # 如果需要截断或填充到最大长度
+                # 截断
                 input_ids = input_ids[:max_len]
                 labels = labels[:max_len]
 
-                # 填充或处理标签，避免出现 -100 的标签
+                # 填充
                 while len(input_ids) < max_len:
-                    input_ids.append(token2id['<pad>'])  # 使用 <pad> 填充
-                    labels.append(-100)  # 标签对应 -100，表示忽略这个位置
+                    input_ids.append(token2id['<pad>'])
+                    labels.append(-100)
 
                 self.samples.append((torch.tensor(input_ids), torch.tensor(labels)))
 
@@ -61,13 +60,14 @@ class QADataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        x, y = self.samples[idx]
-        return x, y
+        return self.samples[idx]
 
+# =====================
 # 加载数据集
+# =====================
 dataset = QADataset(train_data_file, token2id, max_len)
-
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
 # =====================
 # 构建模型
 # =====================
@@ -85,7 +85,7 @@ print(f"🚀 当前模型的总参数量: {total_params:,}")
 
 criterion = nn.CrossEntropyLoss(ignore_index=token2id['<pad>'])
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-scheduler = StepLR(optimizer, step_size=50, gamma=0.5)  # 每 50 epoch 学习率减半
+scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
 # =====================
 # 加载模型参数的函数
@@ -129,9 +129,12 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
 
         print(f"📅 Epoch {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f} - LR: {scheduler.get_last_lr()[0]:.6f}")
 
-        if epoch % 50 == 0 and epoch != 0:
-            torch.save(model.state_dict(), model_path)
-            print(f"💾 Epoch {epoch+1} 模型已保存")
+        # 每2轮保存一次
+        if (epoch + 1) % 2 == 0:
+            save_name = f"epoch_{epoch+1:03d}.pth"
+            save_path = os.path.join(model_save_dir, save_name)
+            torch.save(model.state_dict(), save_path)
+            print(f"💾 Epoch {epoch+1} 模型已保存到 {save_path}")
 
     # 画 loss 曲线
     plt.figure()
@@ -150,7 +153,8 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
 train(model, data_loader, criterion, optimizer, num_epochs, model_path=model_path)
 
 # =====================
-# 最终保存
+# 最终保存模型
 # =====================
-torch.save(model.state_dict(), model_path)
-print(f"✅ 最终模型已保存为 {model_path}")
+final_model_path = os.path.join(model_save_dir, "final_model.pth")
+torch.save(model.state_dict(), final_model_path)
+print(f"✅ 最终模型已保存为 {final_model_path}")

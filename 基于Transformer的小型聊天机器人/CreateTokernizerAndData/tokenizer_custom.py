@@ -82,3 +82,21 @@ def decode(ids, id2token):
 #     print(f"编码后的前几个结果: {encoded[:10]}...")  # 只显示编码后的前10个
 #     print(f"解码后的结果: {decoded}")
 #     print("=" * 50)
+
+def encode_question(question: str, token2id: dict, max_len: int = 128) -> list:
+    """
+    给定问题内容，生成加上 <bos> 和 <sep> 的编码序列。
+    """
+    special_tokens = ["<bos>", "<sep>"]
+    input_text = special_tokens[0] + question + special_tokens[1]
+
+    # 把每个字符作为 token 进行编码
+    input_ids = [token2id.get(char, token2id.get("<unk>", 1)) for char in input_text]
+
+    # 补齐到 max_len
+    if len(input_ids) < max_len:
+        input_ids += [token2id.get("<pad>", 0)] * (max_len - len(input_ids))
+    else:
+        input_ids = input_ids[:max_len]
+
+    return input_ids
