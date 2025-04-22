@@ -16,21 +16,20 @@ from CreateTokernizerAndData.tokenizer_custom import load_vocab_from_file, encod
 
 vocab_file = 'vocab.json'
 train_data_file = 'train_encoded_v2.jsonl'
-
 batch_size = 16
 max_len = 128
-num_epochs = 300
+num_epochs = 50
 learning_rate = 1e-4
 
 # 保存模型轮次
-epoch_save = 15
+epoch_save = 20
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 模型保存目录和最终模型路径
 model_save_dir = "saved_models"
 os.makedirs(model_save_dir, exist_ok=True)
 model_path = os.path.join(model_save_dir, "final_model.pth")
-
+log_file = os.path.join(model_save_dir, "training_log.txt")
 # =====================
 # 读取词表
 # =====================
@@ -68,18 +67,6 @@ class QADataset(Dataset):
 # =====================
 dataset = QADataset(train_data_file, token2id, max_len)
 data_loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
-
-# # 查看第一批数据
-# for batch_idx, (input_ids, labels) in enumerate(data_loader):
-#     if batch_idx == 0:
-#         print("🚀 第一批次的输入和标签：")
-#         for i in range(len(input_ids)):
-#             print(f"---- 样本 {i+1} ----")
-#             print(f"输入解码：{decode(input_ids[i].tolist(), id2token)}")
-
-#             print(f"输出解码：{decode(labels[i].tolist(), id2token)}")
-#         break
-# input()
 
 # =====================
 # 构建模型
@@ -123,6 +110,9 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
     else:
         print("🆕 开始首次训练")
 
+    with open(log_file, 'a', encoding='utf-8') as f:
+        f.write(f"\n我对 GPT2Transformer 模型进行了训练，共计 {num_epochs} 轮，开始训练。\n")
+
     model.train()
     loss_history = []
 
@@ -146,22 +136,14 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
 
         print(f"📅 Epoch {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f} - LR: {scheduler.get_last_lr()[0]:.6f}")
 
+        with open(log_file, 'a', encoding='utf-8') as f:
+            f.write(f"轮次 {epoch+1}/{num_epochs} - Loss: {avg_loss:.4f} - 学习率: {scheduler.get_last_lr()[0]:.6f}\n")
+
         if (epoch + 1) % epoch_save == 0:
             save_name = f"epoch_{epoch+1:03d}.pth"
             save_path = os.path.join(model_save_dir, save_name)
             torch.save(model.state_dict(), save_path)
             print(f"💾 模型保存到 {save_path}")
-
-    # 保存 loss 曲线
-    plt.figure()
-    plt.plot(range(1, num_epochs + 1), loss_history, label='Train Loss')
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training Loss Curve")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig("loss_curve.png")
-    print("📉 Loss 曲线已保存为 loss_curve.png")
 
 # =====================
 # 开始训练

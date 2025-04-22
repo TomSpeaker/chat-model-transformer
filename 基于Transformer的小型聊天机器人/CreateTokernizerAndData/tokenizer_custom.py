@@ -92,13 +92,13 @@ if __name__ == '__main__':
     save_vocab_to_file(token2id, id2token, vocab_file)
 
     # 3. 加载词表
-    loaded_token2id, loaded_id2token = load_vocab_from_file(vocab_file)
+    # loaded_token2id, loaded_id2token = load_vocab_from_file(vocab_file)
 
-    # 4. 测试编码 & 解码
-    question = "你好"
-    encoded = encode(question, loaded_token2id, max_len=40)
-    decoded = decode(encoded, loaded_id2token)
+    # # 4. 测试编码 & 解码
+    # question = "你好"
+    # encoded = encode(question, loaded_token2id, max_len=40)
+    # decoded = decode(encoded, loaded_id2token)
 
-    print(f"\n🟢 原始问题: {question}")
-    print(f"🔢 编码后的前几个 token: {encoded[:10]}...")
-    print(f"🔤 解码后的问题: {decoded}")
+    # print(f"\n🟢 原始问题: {question}")
+    # print(f"🔢 编码后的前几个 token: {encoded[:10]}...")
+    # print(f"🔤 解码后的问题: {decoded}")
