@@ -1,15 +1,14 @@
-from CreateTokernizerAndData.tokenizer_custom import build_vocab_from_file, encode_question, decode
+from CreateTokernizerAndData.tokenizer_custom import load_vocab_from_file, encode,decode
 import torch
 from model import GPT2Transformer
 
 # ===================== 参数配置 =====================
-train_file = 'train.txt'
-model_path = 'saved_models/epoch_006.pth'
+vocab_file = 'vocab.json'  # 用于构建词表的文件
+model_path = 'saved_models/final_model.pth'
 max_len = 128
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 # ===================== 加载词表 =====================
-token2id, id2token = build_vocab_from_file(train_file)
+token2id, id2token = load_vocab_from_file(vocab_file)
 vocab_size = len(token2id)
 
 # ===================== 加载模型 =====================
@@ -33,7 +32,7 @@ while True:
     question = input("请输入问题:")
 
     # 编码输入
-    input_ids = encode_question(question, token2id, max_len=max_len)  # List[int]
+    input_ids = encode(question, token2id, max_len=max_len)  # List[int]
     input_tensor = torch.tensor(input_ids, dtype=torch.long).unsqueeze(0).to(device)  # [1, seq_len]
 
     # 解码原始输入
@@ -54,3 +53,4 @@ while True:
     print(f"🔵 解码输入: {decoded_input}")
     print(f"🟣 模型输出ID: {predicted_ids[:50]} ...")
     print(f"🟠 模型输出文本: {decoded_output}")
+    

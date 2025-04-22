@@ -66,11 +66,17 @@ def encode(text, token2id, max_len=128):
 # Step 5: 解码函数
 # =============================
 def decode(ids, id2token):
-    tokens = [id2token.get(i, '<unk>') for i in ids]
+    tokens = []
+    for i in ids:
+        token = id2token.get(i, '<unk>')
+        if token == '<eos>':
+            break  # 遇到 <eos> 就停止解码
+        if token in ['<pad>', '<unk>', '<bos>']:
+            continue  # 跳过这些特殊符号
+        tokens.append(token)
+    return ''.join(tokens)
 
-    # 过滤掉特殊符号
-    text = ''.join([tok for tok in tokens if tok not in ['<pad>', '<unk>', '<bos>', '<eos>']])
-    return text
+
 
 # =============================
 # 示例使用
