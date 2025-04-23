@@ -13,23 +13,22 @@ from CreateTokernizerAndData.tokenizer_custom import load_vocab_from_file, encod
 # =====================
 # 配置参数
 # =====================
-
 vocab_file = 'vocab.json'
 train_data_file = 'train_encoded_v2.jsonl'
 batch_size = 16
 max_len = 128
 num_epochs = 50
 learning_rate = 1e-4
-
-# 保存模型轮次
 epoch_save = 20
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 模型保存目录和最终模型路径
 model_save_dir = "saved_models"
 os.makedirs(model_save_dir, exist_ok=True)
 model_path = os.path.join(model_save_dir, "final_model.pth")
 log_file = os.path.join(model_save_dir, "training_log.txt")
+state_file = os.path.join(model_save_dir, "train_state.json")
+
 # =====================
 # 读取词表
 # =====================
@@ -49,7 +48,6 @@ class QADataset(Dataset):
                 input_ids = sample['input_ids'][:max_len]
                 labels = sample['labels'][:max_len]
 
-                # 填充
                 while len(input_ids) < max_len:
                     input_ids.append(token2id['<pad>'])
                     labels.append(-100)
@@ -88,7 +86,7 @@ optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 scheduler = StepLR(optimizer, step_size=50, gamma=0.5)
 
 # =====================
-# 加载模型参数的函数
+# 模型 & 状态加载与保存
 # =====================
 def load_model(model, model_path):
     if os.path.exists(model_path):
@@ -99,11 +97,31 @@ def load_model(model, model_path):
         print("⚠️ 未找到模型参数，将从头开始训练")
         return False
 
+def load_train_state():
+    if os.path.exists(state_file):
+        with open(state_file, "r", encoding="utf-8") as f:
+            state = json.load(f)
+        print(f"📄 已加载训练状态：轮次 {state['epoch']}, 学习率 {state['lr']}")
+        return state["epoch"], state["lr"]
+    return 0, learning_rate
+
+def save_train_state(epoch, lr):
+    state = {
+        "epoch": epoch,
+        "lr": lr
+    }
+    with open(state_file, "w", encoding="utf-8") as f:
+        json.dump(state, f)
+
 # =====================
 # 训练函数
 # =====================
 def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None):
     loaded = load_model(model, model_path) if model_path else False
+    start_epoch, resumed_lr = load_train_state()
+
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = resumed_lr
 
     if loaded:
         print("🔄 继续训练模型")
@@ -116,7 +134,7 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
     model.train()
     loss_history = []
 
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         total_loss = 0.0
 
         for batch_idx, (x, y) in enumerate(data_loader):
@@ -143,6 +161,7 @@ def train(model, data_loader, criterion, optimizer, num_epochs, model_path=None)
             save_name = f"epoch_{epoch+1:03d}.pth"
             save_path = os.path.join(model_save_dir, save_name)
             torch.save(model.state_dict(), save_path)
+            save_train_state(epoch + 1, scheduler.get_last_lr()[0])
             print(f"💾 模型保存到 {save_path}")
 
 # =====================

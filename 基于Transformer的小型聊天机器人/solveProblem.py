@@ -4,7 +4,7 @@ from model import GPT2Transformer
 
 # ===================== 参数配置 =====================
 vocab_file = 'vocab.json'  # 用于构建词表的文件
-model_path = 'saved_models/epoch_090.pth'
+model_path = 'saved_models/final_model.pth'
 max_len = 128
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # ===================== 加载词表 =====================
