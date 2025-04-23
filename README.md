@@ -68,7 +68,9 @@ The core implementation of the project uses the PyTorch framework. It trains a l
 
 ![](images/3.png)
 
-练到ok的状态即可
+练到ok的状态即可(我训练到损失率在0.4左右，表现还可以,可以完成问答)
+
+it is ok to just train until the loss  rate is about 0.4,performance is enough to solve the 
 
 # 📌Model Design模型设计
 
@@ -550,3 +552,4 @@ model_path = 'saved_models/epoch_090.pth'
 #Select the parameters of the model in the file to be the parameters you trained, then run the script to interactively observe the training results.
 ```
 
+[阿里云jupyternotebook体验](https://tianchi.aliyun.com/notebook-ai/detail?postId=789636)
